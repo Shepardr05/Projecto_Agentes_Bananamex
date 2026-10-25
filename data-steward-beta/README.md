@@ -6,9 +6,11 @@ Asistente que responde preguntas de **gobierno y calidad de datos** a partir de 
 
 ## Integrantes del equipo
 
-- Nombre 1 (matrícula)
-- Nombre 2 (matrícula)
-- Nombre 3 (matrícula)
+- Eduardo Ramírez Almanza - A01660118
+- Eduardo Xavier Castellanos Montero - A01665358
+- Helena Eridani Escandón López - A01659511
+- José Antonio Pacheco Chargoy - A01663815
+- Jerónimo Gerardo García Landa - A01644050
 
 ## Arquitectura general
 
