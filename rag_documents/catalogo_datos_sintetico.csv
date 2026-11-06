@@ -1,0 +1,37 @@
+table_name,field_name,description,data_type,classification,data_owner,data_steward,retention,quality_rule
+dim.dim_cliente,num_cte,Identificador unico del cliente (llave primaria),integer,Confidencial,Direccion de Clientes,Steward de Clientes,Vida del cliente + 10 anos,Unico y no nulo (DQ-05)
+dim.dim_cliente,fec_alta,Fecha de alta del cliente en el banco,date,Interna,Direccion de Clientes,Steward de Clientes,Vida del cliente + 10 anos,No nulo; no posterior a la fecha de informacion
+dim.dim_cliente,fec_nac,Fecha de nacimiento del cliente (dato personal),date,Restringida,Direccion de Clientes,Steward de Clientes,Vida del cliente + 10 anos,Clientes PF deben tener 18 anos o mas (DQ-09)
+dim.dim_cliente,tipo_persona,Tipo de persona: PF (persona fisica) o PM (persona moral),varchar,Interna,Direccion de Clientes,Steward de Clientes,Vida del cliente + 10 anos,Dominio permitido: PF o PM
+dim.dim_cliente,genero_cte,Genero del cliente; NO APLICA para personas morales (dato personal),varchar,Restringida,Direccion de Clientes,Steward de Clientes,Vida del cliente + 10 anos,Dominio: HOMBRE / MUJER / NO APLICA
+dim.dim_cliente,segmento_cte,Segmento comercial: PREMIUM / PREFERENTE / MASIVO,varchar,Interna,Direccion de Banca Comercial,Steward de Clientes,Vida del cliente + 10 anos,No nulo; dominio cerrado
+dim.dim_cliente,giro_empresa,Giro o actividad economica (aplica a personas morales),varchar,Interna,Direccion de Banca Empresarial,Steward de Clientes,Vida del cliente + 10 anos,Debe informarse para PM (DQ-10)
+dim.dim_cliente,cve_territorio,Clave del territorio comercial del cliente,varchar,Interna,Direccion de Red Comercial,Steward de Estructura Comercial,Vida del cliente + 10 anos,Debe informarse (DQ-10)
+dim.dim_cliente,cve_dir,Clave de la direccion regional,varchar,Interna,Direccion de Red Comercial,Steward de Estructura Comercial,Vida del cliente + 10 anos,Debe informarse (DQ-10)
+dim.dim_cliente,cve_subdir,Clave de la subdireccion regional,varchar,Interna,Direccion de Red Comercial,Steward de Estructura Comercial,Vida del cliente + 10 anos,Debe informarse (DQ-10)
+dim.dim_cliente,cve_sucursal,Clave de la sucursal que atiende al cliente,integer,Interna,Direccion de Red Comercial,Steward de Estructura Comercial,Vida del cliente + 10 anos,Debe informarse (DQ-10)
+dim.dim_cliente,cve_promotor,Clave del promotor asignado al cliente,varchar,Interna,Direccion de Red Comercial,Steward de Estructura Comercial,Vida del cliente + 10 anos,Debe informarse (DQ-10)
+dim.dim_producto,cve_producto,Clave del producto: CHEQUES / AHORRO / C_PERSONAL / TDC (llave primaria),varchar,Interna,Direccion de Productos,Steward de Productos,Permanente,Unico y no nulo
+dim.dim_producto,cve_dominio,Dominio de negocio del producto: DEPOSITS / LENDING / TDC,varchar,Interna,Direccion de Productos,Steward de Productos,Permanente,Fuente oficial del dominio (DQ-08)
+dim.dim_producto,grupo_producto,Grupo del producto: CAPTACION o COLOCACION,varchar,Interna,Direccion de Productos,Steward de Productos,Permanente,Dominio: CAPTACION / COLOCACION
+dim.dim_txn,cve_txn,Clave de transaccion (100 deposito; 200 retiro; 300 pagos; 400 compras; 450 disposiciones). Se repite entre productos; unir siempre con cve_producto,integer,Interna,Direccion de Productos,Steward de Productos,Permanente,Unir por cve_producto + cve_txn (DQ-06)
+dim.dim_txn,desc_txn,Descripcion de la transaccion,varchar,Interna,Direccion de Productos,Steward de Productos,Permanente,No nulo
+cfg.fact_sdos_captacoloca_m,num_cta,Numero de cuenta (CHEQUES 1xxxxx; AHORRO 2xxxxx; TDC 3xxxxx; C_PERSONAL 4xxxxx),integer,Confidencial,Direccion de Operaciones,Steward de Saldos,10 anos,Unico por mes (DQ-01)
+cfg.fact_sdos_captacoloca_m,num_cte,Cliente titular de la cuenta,integer,Confidencial,Direccion de Operaciones,Steward de Saldos,10 anos,Debe existir en dim_cliente (DQ-05)
+cfg.fact_sdos_captacoloca_m,cve_producto,Producto de la cuenta,varchar,Interna,Direccion de Operaciones,Steward de Saldos,10 anos,Debe existir en dim_producto
+cfg.fact_sdos_captacoloca_m,fec_alta,Fecha de apertura de la cuenta,date,Interna,Direccion de Operaciones,Steward de Saldos,10 anos,No nulo
+cfg.fact_sdos_captacoloca_m,cve_mes_alta,Mes (YYYYMM) de apertura de la cuenta; NO es el mes de la foto de saldos,integer,Interna,Direccion de Operaciones,Steward de Saldos,10 anos,No usar para filtrar meses; usar fec_informacion
+cfg.fact_sdos_captacoloca_m,saldo_apertura,Saldo al inicio del mes (enero: saldo inicial; feb-jun: cierre del mes anterior),numeric(18.2),Confidencial,Direccion de Finanzas,Steward de Saldos,10 anos,No nulo (DQ-02)
+cfg.fact_sdos_captacoloca_m,saldo_mes,Saldo de cierre del mes. En captacion es dinero del cliente; en colocacion es deuda del cliente,numeric(18.2),Confidencial,Direccion de Finanzas,Steward de Saldos,10 anos,No nulo y mayor o igual a 0 (DQ-02 DQ-03); debe conciliar con movimientos (DQ-11)
+cfg.fact_sdos_captacoloca_m,fec_informacion,Fecha de cierre del mes en formato entero YYYYMMDD; es la columna correcta para filtrar por mes,integer,Interna,Direccion de Finanzas,Steward de Saldos,10 anos,No nulo; fin de mes
+cfg.fact_sdos_captacoloca_m,dominio,Dominio de negocio. Inconsistente: enero usa CAPTACION/COLOCACION y feb-jun usa DEPOSITS/LENDING/TDC,varchar,Interna,Direccion de Finanzas,Steward de Saldos,10 anos,Debe coincidir con dim_producto.cve_dominio (DQ-07 DQ-08)
+cfg.fact_txn_captacoloca_d,num_cta,Cuenta a la que pertenece la transaccion,integer,Confidencial,Direccion de Operaciones,Steward de Transacciones,10 anos,Debe existir en saldos
+cfg.fact_txn_captacoloca_d,num_cte,Cliente titular,integer,Confidencial,Direccion de Operaciones,Steward de Transacciones,10 anos,Debe existir en dim_cliente
+cfg.fact_txn_captacoloca_d,cve_producto,Producto de la transaccion,varchar,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,Debe existir en dim_producto
+cfg.fact_txn_captacoloca_d,fec_txn,Fecha de la transaccion,date,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,No nulo
+cfg.fact_txn_captacoloca_d,cve_mes_txn,Mes de la transaccion en formato YYYYMM,integer,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,Consistente con fec_txn
+cfg.fact_txn_captacoloca_d,saldo_txn,Importe de la transaccion; siempre positivo. El signo economico lo define producto + cve_txn,numeric(18.2),Confidencial,Direccion de Finanzas,Steward de Transacciones,10 anos,Mayor que 0 (DQ-04)
+cfg.fact_txn_captacoloca_d,cve_txn,Clave de transaccion,integer,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,Debe existir en dim_txn por producto (DQ-06)
+cfg.fact_txn_captacoloca_d,desc_txn,Descripcion de la transaccion,varchar,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,Coincide con dim_txn
+cfg.fact_txn_captacoloca_d,fec_informacion,Fecha de cierre del mes en formato YYYYMMDD,integer,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,No nulo
+cfg.fact_txn_captacoloca_d,dominio,Dominio de negocio (DEPOSITS / LENDING / TDC),varchar,Interna,Direccion de Operaciones,Steward de Transacciones,10 anos,Coincide con dim_producto.cve_dominio

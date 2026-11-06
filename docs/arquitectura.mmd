@@ -1,0 +1,19 @@
+flowchart LR
+  U(["Usuario<br/>Data Steward"]) --> A["AGENTE<br/>LangChain create_agent<br/>src/agent.py"]
+  A <--> L["LLM<br/>Ollama · Gemini · Claude"]
+
+  A -- "MCP stdio" --> S1["MCP server postgres<br/>6 tools: guía del modelo, list/describe,<br/>run_sql_query solo SELECT,<br/>perfil de calidad, reglas DQ-01..11"]
+  A -- "MCP stdio" --> S2["MCP server governance<br/>search_governance_knowledge<br/>RAG con score mínimo"]
+  A -. "tool local opcional" .-> W["web_search<br/>Tavily"]
+
+  S1 --> DB[("PostgreSQL embebido (pip, sin Docker)<br/>esquemas dim + cfg<br/>rol steward_ro SOLO LECTURA")]
+  S2 --> P[("Pinecone<br/>índice rag-governance")]
+  S2 --> E["Ollama<br/>embeddings bge-m3"]
+
+  SQL["sql/000-003<br/>scripts del socio"] -- "carga inicial" --> DB
+  DOCS["rag_documents/<br/>PDFs · política · catálogo"] --> ING["ingest_governance.py"]
+  ING --> P
+  ING --> E
+
+  classDef build fill:#f3f3f3,stroke:#999,stroke-dasharray: 4 3
+  class SQL,DOCS,ING build
