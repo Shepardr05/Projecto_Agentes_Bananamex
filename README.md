@@ -14,7 +14,7 @@ Arquitectura: [`docs/arquitectura.png`](docs/arquitectura.png) · [`docs/ARQUITE
 
 **Requisitos:** [Python 3.11+](https://www.python.org/downloads/) (con *Add to PATH*) y [Ollama](https://ollama.com/download) abierto. No se necesita Docker ni instalar PostgreSQL.
 
-**1. Crea `.env`** en la raíz del proyecto (cambia solo las dos claves):
+**1. Crear `.env`** en la raíz del proyecto (cambiar solo las dos claves):
 
 ```
 PINECONE_API_KEY=pega_tu_clave_de_pinecone
@@ -28,13 +28,13 @@ USE_EMBEDDED_DB=1
 POSTGRES_DB=banco_sintetico
 ```
 
-**2. Instala todo** (crea el entorno, instala dependencias, carga la base, descarga modelos, crea el índice de Pinecone y lo llena):
+**2. Instalar todo** (crear el entorno, instalar dependencias, cargar la base, descargar modelos, crear el índice de Pinecone y lo llena):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-**3. Usa el proyecto:**
+**3. Usar el proyecto:**
 
 ```powershell
 .\run.ps1 demo                      # demo con 6 preguntas
@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 
 Mac/Linux: `bash setup.sh` y `./run.sh demo`.
 
-Problemas comunes: si falla `Ollama no responde`, abre la app de Ollama; si el RAG no devuelve fuentes, baja `MIN_SCORE` a 0.3.
+Problemas comunes: si falla `Ollama no responde`, abre la app de Ollama; si el RAG no devuelve fuentes, bajar `MIN_SCORE` a 0.3.
 
 ## Estructura
 
@@ -86,16 +86,6 @@ Problemas comunes: si falla `Ollama no responde`, abre la app de Ollama; si el R
 - `pytest`: 19/19 pasan.
 - Casos con el agente (`llama3.1`): **7/10 pasan** (fallan T1, T6 y T8). En los fallos el modelo no usa bien el resultado de las tools; los resultados varían entre corridas.
 - Detalle: [`docs/RESULTADOS_PRUEBAS.md`](docs/RESULTADOS_PRUEBAS.md) · Causas: [`docs/ANALISIS_FALLOS.md`](docs/ANALISIS_FALLOS.md)
-
-## Datos del socio: hallazgos
-
-Los scripts generan 5,000 clientes, 20,000 cuentas, 225,000 transacciones y 120,000 saldos.
-
-1. El script 002 requiere el esquema `cfg`, que el 001 no crea: se añadió `sql/000_crear_esquema_cfg.sql`.
-2. Los scripts no son re-ejecutables; `load_db.py --force` regenera la base.
-3. `dominio` vale `CAPTACION/COLOCACION` en enero y `DEPOSITS/LENDING/TDC` de febrero a junio.
-4. Seis columnas de `dim_cliente` están 100% NULL (incluida `cve_sucursal`).
-5. No hay transacciones de enero.
 
 ## Limitaciones
 
