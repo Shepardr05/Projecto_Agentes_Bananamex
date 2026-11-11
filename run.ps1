@@ -3,6 +3,10 @@
 #   .\run.ps1 ask "tu pregunta"         una pregunta
 #   .\run.ps1 chat                      chat interactivo
 #   .\run.ps1 tests                     10 casos de prueba -> docs\RESULTADOS_PRUEBAS.md
+#   .\run.ps1 preguntas                 las 15 preguntas + revision -> docs\RESULTADOS_15_PREGUNTAS.md
+#   .\run.ps1 langsmith                evalua las 15 preguntas en LangSmith (requiere LANGSMITH_API_KEY)
+#   .\run.ps1 lote archivo.txt         preguntas de un archivo (una por linea) -> docs\RESPUESTAS_<archivo>.md
+#   .\run.ps1 respuestas                las 15 preguntas con su respuesta -> docs\RESPUESTAS_15.md
 #   .\run.ps1 pytest                    pruebas deterministas del servidor MCP de SQL
 #   .\run.ps1 check                     diagnostico del entorno
 #   .\run.ps1 raw                       MCP sin LLM (plan B de la demo)
@@ -19,10 +23,14 @@ switch ($cmd) {
     "ask"     { & $py src\agent.py @rest }
     "chat"    { & $py src\agent.py -i }
     "tests"   { & $py src\run_test_cases.py @rest }
+    "preguntas" { & $py src\run_preguntas.py @rest }
+    "respuestas" { & $py src\respuestas_15.py @rest }
+    "langsmith" { & $py src\evaluar_langsmith.py @rest }
+    "lote"    { & $py src\responder_lote.py @rest }
     "pytest"  { & $py -m pytest -q }
     "check"   { & $py scripts\check_setup.py }
     "raw"     { & $py src\mcp_raw_client.py }
     "reload-db" { & $py scripts\load_db.py --force }
     "stop-db" { & $py scripts\stop_db.py }
-    default   { Write-Host "Comando desconocido: $cmd (demo, ask, chat, tests, pytest, check, raw, reload-db, stop-db)" }
+    default   { Write-Host "Comando desconocido: $cmd (demo, ask, chat, tests, preguntas, respuestas, lote, langsmith, pytest, check, raw, reload-db, stop-db)" }
 }
