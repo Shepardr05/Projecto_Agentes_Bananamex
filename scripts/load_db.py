@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 load_dotenv(ROOT / ".env")
+import auth  # noqa: E402
 import db_config  # noqa: E402
 
 EXPECTED = {"cfg.fact_sdos_captacoloca_m": 120000, "cfg.fact_txn_captacoloca_d": 225000, "dim.dim_cliente": 5000}
@@ -28,23 +29,40 @@ def counts(conn) -> dict | None:
         return None
 
 
-def ensure_role(conn) -> None:
-    ro = db_config.RO_USER
-    conn.execute(
-        psycopg.sql.SQL("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = {r}) "
-                        "THEN CREATE ROLE {i} LOGIN; END IF; END $$").format(
-            r=psycopg.sql.Literal(ro), i=psycopg.sql.Identifier(ro)))
+def ensure_role(conn, role: str, password_env: str, columns: list[tuple[str, str]] | None = None) -> None:
+    """Crea (o actualiza) un rol de SOLO LECTURA. Con `columns` [(esquema.tabla, columna)] solo
+    recibe SELECT sobre esas columnas; sin `columns` recibe SELECT sobre todas las tablas."""
+    ident, sql = psycopg.sql.Identifier(role), psycopg.sql
+    conn.execute(sql.SQL("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = {r}) "
+                         "THEN CREATE ROLE {i} LOGIN; END IF; END $$").format(r=sql.Literal(role), i=ident))
     if not db_config.use_embedded():  # en modo externo el rol lleva contrasena
         import os
-        conn.execute(psycopg.sql.SQL("ALTER ROLE {i} PASSWORD {p}").format(
-            i=psycopg.sql.Identifier(ro), p=psycopg.sql.Literal(os.environ["PGPASSWORD"])))
-    db = db_config.db_name()
-    conn.execute(psycopg.sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
-        psycopg.sql.Identifier(db), psycopg.sql.Identifier(ro)))
-    conn.execute(psycopg.sql.SQL("GRANT USAGE ON SCHEMA dim, cfg TO {}").format(psycopg.sql.Identifier(ro)))
-    conn.execute(psycopg.sql.SQL("GRANT SELECT ON ALL TABLES IN SCHEMA dim, cfg TO {}").format(psycopg.sql.Identifier(ro)))
-    conn.execute(psycopg.sql.SQL("ALTER ROLE {} SET default_transaction_read_only = on").format(psycopg.sql.Identifier(ro)))
-    conn.execute(psycopg.sql.SQL("ALTER ROLE {} SET statement_timeout = '15s'").format(psycopg.sql.Identifier(ro)))
+        conn.execute(sql.SQL("ALTER ROLE {i} PASSWORD {p}").format(i=ident, p=sql.Literal(os.environ[password_env])))
+    conn.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(db_config.db_name()), ident))
+    conn.execute(sql.SQL("GRANT USAGE ON SCHEMA dim, cfg TO {}").format(ident))
+    conn.execute(sql.SQL("REVOKE ALL ON ALL TABLES IN SCHEMA dim, cfg FROM {}").format(ident))  # idempotente
+    if columns is None:
+        conn.execute(sql.SQL("GRANT SELECT ON ALL TABLES IN SCHEMA dim, cfg TO {}").format(ident))
+    else:
+        by_table: dict[str, list[str]] = {}
+        for table, col in columns:
+            by_table.setdefault(table, []).append(col)
+        for table, cols in by_table.items():
+            schema, name = table.split(".")
+            conn.execute(sql.SQL("GRANT SELECT ({}) ON {}.{} TO {}").format(
+                sql.SQL(", ").join(map(sql.Identifier, cols)), sql.Identifier(schema), sql.Identifier(name), ident))
+    conn.execute(sql.SQL("ALTER ROLE {} SET default_transaction_read_only = on").format(ident))
+    conn.execute(sql.SQL("ALTER ROLE {} SET statement_timeout = '15s'").format(ident))
+
+
+def ensure_roles(conn) -> None:
+    """admin -> steward_ro (todo) | usuario -> steward_usuario (todo MENOS columnas personales)."""
+    ensure_role(conn, db_config.RO_USER, "PGPASSWORD")
+    allowed = conn.execute(
+        "SELECT table_schema || '.' || table_name, column_name FROM information_schema.columns "
+        "WHERE table_schema IN ('dim', 'cfg') AND column_name <> ALL(%s) ORDER BY 1, ordinal_position",
+        (list(auth.PII_COLUMNS),)).fetchall()
+    ensure_role(conn, db_config.USER_RO, "PGPASSWORD_USUARIO", columns=allowed)
 
 
 def main(force: bool = False) -> None:
@@ -69,9 +87,10 @@ def main(force: bool = False) -> None:
             for f in sorted((ROOT / "sql").glob("00[0-3]_*.sql")):
                 print(f"Ejecutando {f.name} ...", flush=True)
                 conn.execute(f.read_text(encoding="utf-8"))
-        ensure_role(conn)
+        conn.execute("ANALYZE")  # estadisticas para el planificador: sin esto, la 1a consulta con JOIN tarda >15 s
+        ensure_roles(conn)
         print("Conteos:", counts(conn))
-        print("Rol de solo lectura:", db_config.RO_USER)
+        print("Roles de solo lectura:", db_config.RO_USER, "(admin),", db_config.USER_RO, "(usuario, sin datos personales)")
 
 
 if __name__ == "__main__":

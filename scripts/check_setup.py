@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / ".env")
+import auth  # noqa: E402
 import common  # noqa: E402,F401  (configura la consola)
 import db_config  # noqa: E402
 
@@ -47,6 +48,15 @@ def check_db():
             except Exception:
                 c.rollback()
                 print(OK, "El usuario de conexion es de solo lectura")
+        try:
+            with psycopg.connect(**db_config.readonly_conninfo("usuario"), connect_timeout=8) as u:
+                try:
+                    u.execute("select fec_nac from dim.dim_cliente limit 1")
+                    print(BAD, "El rol usuario PUEDE leer datos personales (fec_nac)")
+                except psycopg.errors.InsufficientPrivilege:
+                    print(OK, "El rol usuario NO puede leer datos personales")
+        except psycopg.OperationalError:
+            print(BAD, "No existe el rol de BD del usuario -> corre:  python scripts/load_db.py")
     except Exception as e:
         print(BAD, f"PostgreSQL: {type(e).__name__}: {str(e).splitlines()[0]}")
         print("       -> corre:  python scripts/load_db.py")
@@ -84,7 +94,7 @@ async def check_mcp():
     from langchain.mcp import MCPAdapter
 
     try:
-        async with MCPAdapter(mcp_config()) as a:
+        async with MCPAdapter(mcp_config(auth.User("diagnostico", "admin"))) as a:
             tools = await a.list_tools()
             names = [t.name for t in tools]
             print(OK, f"MCP: {len(names)} tools descubiertas -> {', '.join(names)}")

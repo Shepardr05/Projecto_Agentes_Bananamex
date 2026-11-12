@@ -3,7 +3,7 @@
 ![Arquitectura](arquitectura.png)
 
 ## Flujo de una pregunta
-1. El usuario pregunta al **agente** (`src/agent.py`, LangChain `create_agent`).
+1. El usuario inicia sesión (usuario y contraseña) y pregunta al **agente** (`src/agent.py`, LangChain `create_agent`). Su rol decide qué tools se le entregan.
 2. Al iniciar, el agente abre **dos servidores MCP por stdio** con `langchain.mcp.MCPAdapter` y **descubre sus tools** (`tools/list`); no están "cableadas" en el agente. Los nombres quedan con prefijo del servidor: `postgres_*`, `governance_*`.
 3. El **LLM decide** qué tool llamar según el prompt de sistema y las descripciones de cada tool.
 4. Para **datos**: `postgres_get_data_model_guide` → `postgres_run_sql_query` (o perfil/reglas). El servidor MCP ejecuta el SQL en PostgreSQL con un rol de solo lectura y devuelve una tabla markdown.
@@ -16,6 +16,7 @@
 |---|---|
 | SQL detrás de un servidor MCP (no dentro del agente) | Desacopla datos y agente: cualquier cliente MCP puede reutilizarlo; un solo punto donde aplicar seguridad |
 | Rol `steward_ro` + validación SELECT + timeout + tope de filas | Defensa en capas contra escrituras y consultas costosas |
+| Roles `usuario` / `admin` (login, tools por rol, `@auth.guarded`, rol de Postgres `steward_usuario` sin columnas personales, auditoría) | La política interna pide mínimo privilegio y registro; el límite se aplica en la BD, no solo en el prompt. Ver [`ROLES.md`](ROLES.md) |
 | `get_data_model_guide` | Evita que el LLM caiga en trampas del modelo (join de `dim_txn`, `cve_mes_alta`, signo de transacciones, `dominio`) |
 | `run_governance_checks` con reglas DQ-01..11 | Reglas deterministas y auditables; el LLM solo las interpreta |
 | Dos servidores MCP (datos / gobernanza) | Separa fuentes con distinto ciclo de vida y permisos |

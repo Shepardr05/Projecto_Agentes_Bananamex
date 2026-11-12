@@ -25,6 +25,7 @@ import psycopg
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agent import StewardSession  # noqa: E402
+import auth  # noqa: E402
 import db_config  # noqa: E402
 from common import ROOT  # noqa: E402
 
@@ -214,11 +215,11 @@ def truth_section() -> list[str]:
     return out
 
 
-async def run(sel: list[int], use_web: bool, short: bool = False) -> None:
+async def run(user: auth.User, sel: list[int], use_web: bool, short: bool = False) -> None:
     qs = [q for q in Q_ if not sel or q.n in sel]
     res = []
     bar = "=" * 78
-    async with StewardSession(use_web=use_web) as s:
+    async with StewardSession(user, use_web=use_web) as s:
         for q in qs:
             print(f"\n{bar}\n[P{q.n}] ({q.group}) {q.question}\n{bar}", flush=True)
             try:
@@ -269,4 +270,5 @@ async def run(sel: list[int], use_web: bool, short: bool = False) -> None:
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    asyncio.run(run([int(x) for x in a if x.isdigit()], "--no-web" not in a, "--corto" in a))
+    user = auth.login_from_argv(a)  # --user NOMBRE (rol admin recomendado: usa describe_table y reglas DQ)
+    asyncio.run(run(user, [int(x) for x in a if x.isdigit()], "--no-web" not in a, "--corto" in a))

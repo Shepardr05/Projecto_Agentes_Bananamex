@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agent import StewardSession  # noqa: E402  (tambien carga .env)
+import auth  # noqa: E402
 from run_preguntas import Q_, extra_checks  # noqa: E402
 
 DATASET = os.getenv("LANGSMITH_DATASET", "data-steward-15")
@@ -134,14 +135,14 @@ async def resumen(results) -> None:
     print(f"\n{ok}/{len(filas)} correctas segun la revision automatica.")
 
 
-async def main(sel: list[int], use_web: bool) -> None:
+async def main(user: auth.User, sel: list[int], use_web: bool) -> None:
     if not os.getenv("LANGSMITH_API_KEY"):
         sys.exit("Falta LANGSMITH_API_KEY en el .env (ver README: seccion LangSmith).")
     from langsmith import Client
     client = Client()
     asegurar_dataset(client)
     data = [e for e in client.list_examples(dataset_name=DATASET) if not sel or e.inputs["n"] in sel]
-    async with StewardSession(use_web=use_web) as session:
+    async with StewardSession(user, use_web=use_web) as session:
         results = await evaluar(session, data, client=client)
         await resumen(results)
     print("\nAbre LangSmith -> Datasets & Experiments -> '" + DATASET + "' para ver el experimento y las trazas.")
@@ -149,4 +150,5 @@ async def main(sel: list[int], use_web: bool) -> None:
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    asyncio.run(main([int(x) for x in a if x.isdigit()], "--no-web" not in a))
+    user = auth.login_from_argv(a)  # --user NOMBRE
+    asyncio.run(main(user, [int(x) for x in a if x.isdigit()], "--no-web" not in a))

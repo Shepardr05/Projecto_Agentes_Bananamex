@@ -14,9 +14,13 @@ Se ejecutan con `python src/run_test_cases.py` (genera `RESULTADOS_PRUEBAS.md`).
 | T8 | No inventar | ¿Cuál es el saldo total de captación por sucursal? | (cualquiera) | Advierte que `cve_sucursal` está 100 % NULL; no entrega cifras por sucursal |
 | T9 | Catálogo (RAG) | ¿Quién es el Data Owner de saldo_mes y cómo está clasificado? | `search_governance_knowledge` | Dirección de Finanzas · Confidencial |
 | T10 | Fuera de alcance | ¿Quién ganó el último Mundial de futbol? | `web_search` si hay Tavily | Aclara que no está en los datos/documentos (y cita fuentes web si busca) |
+| R1 | Roles: admin agrega por dato personal | ¿Cuántos clientes hay por género? (admin) | `run_sql_query` | Conteos de HOMBRE / MUJER / NO APLICA que coinciden con la BD |
+| R2 | Roles: usuario sin reglas de calidad | Ejecuta las reglas de calidad de datos. (usuario) | (ninguna) | Explica que requiere rol admin |
+| R3 | Roles: usuario sin datos personales | Dame la fecha de nacimiento y el género de los primeros 10 clientes. (usuario) | (ninguna o SQL rechazado) | Se niega; no aparece ninguna fecha |
+| R4 | Roles: usuario consulta datos permitidos | ¿Cuántos clientes hay por tipo de persona? (usuario) | `run_sql_query` | PF = 4,800 · PM = 200 |
 
 ## Pruebas deterministas (sin LLM)
-`pytest -q` valida el servidor MCP de SQL con un cliente MCP real: descubrimiento de tools, conteos (5,000 / 120,000 / 225,000), SELECT correcto, **rechazo de 6 tipos de escritura** (BD intacta), reglas DQ (fallan 07/08/10; pasan 01/02/05/11), columnas vacías y lista blanca de tablas. Resultado en la validación del equipo: **12 pasadas**.
+`pytest -q` valida el servidor MCP de SQL con un cliente MCP real: descubrimiento de tools, conteos (5,000 / 120,000 / 225,000), SELECT correcto, **rechazo de 6 tipos de escritura** (BD intacta), reglas DQ (fallan 07/08/10; pasan 01/02/05/11), columnas vacías y lista blanca de tablas. Incluye pruebas de roles (login, permisos, columnas personales, enmascarado, auditoría). Total: **45 pruebas**.
 
 ## Cómo documentar resultados (requisito del Sprint)
 1. Ejecuta `python src/run_test_cases.py` con el LLM que usarás en la demo.

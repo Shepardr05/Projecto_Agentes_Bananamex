@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agent import StewardSession  # noqa: E402
+import auth  # noqa: E402
 from common import ROOT  # noqa: E402
 
 PREGUNTAS = [
@@ -57,12 +58,12 @@ def aviso(exc: Exception | None, out: dict | None) -> str:
     return ""
 
 
-async def run(sel: list[int], use_web: bool) -> None:
+async def run(user: auth.User, sel: list[int], use_web: bool) -> None:
     idx = [i for i in range(1, 16) if not sel or i in sel]
     bar = "=" * 78
     md = ["# Respuestas del agente a las 15 preguntas\n", f"Fecha: {datetime.now():%Y-%m-%d %H:%M}\n"]
     avisos = 0
-    async with StewardSession(use_web=use_web) as s:
+    async with StewardSession(user, use_web=use_web) as s:
         for i in idx:
             q = PREGUNTAS[i - 1]
             print(f"\n{bar}\nP{i} ({TIPOS[i - 1]}): {q}\n{bar}", flush=True)
@@ -89,4 +90,5 @@ async def run(sel: list[int], use_web: bool) -> None:
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    asyncio.run(run([int(x) for x in a if x.isdigit()], "--no-web" not in a))
+    user = auth.login_from_argv(a)  # --user NOMBRE
+    asyncio.run(run(user, [int(x) for x in a if x.isdigit()], "--no-web" not in a))
